@@ -26,10 +26,19 @@ import tkinter as tk
 import requests
 import time
 import os
+import sys
 
+def on_closing():
+    # Terminate the command if running
+    if main_thread.command_thread and main_thread.command_thread.is_running():
+        main_thread.stop()
+
+    # Exit the program
+    print("Closing the application. Terminating the script.")
+    sys.exit()
 dir = os.path.abspath(os.path.dirname(__file__))
 
-t_rex = os.path.join(dir, "t-rex.exe")
+SRB_Miner = os.path.join(dir, "SRBMiner-MULTI.exe")
 settings_dir = os.path.join(dir, "settings.json")
 icon_dir = os.path.join(dir, "icon.ico")
 
@@ -76,11 +85,10 @@ class CommandThread(threading.Thread):
         try:
             status = Status.COMPUTING
             for line in iter(self.process.stdout.readline, ''):
-                print(line)
-                hashrate_pattern = r"(\d+\.\d+\s*[A-Za-z]{2}/s)"
-                match = re.search(hashrate_pattern, line)
+                match = re.search(r"Total:\s*([0-9]*\.[0-9]+)\s*(kH/s|MH/s)", line)
+
                 if match:
-                    hashrate = match.group(1)
+                    hashrate = f"{float(match.group(1))} {match.group(2)}"
 
             stdout, stderr = self.process.communicate(timeout=60)
         except subprocess.TimeoutExpired:
@@ -174,7 +182,7 @@ server = settings["server"]
 def convert(input):
     factors = {
         "H/s": 1,
-        "KH/s": 1_000,
+        "kH/s": 1_000,
         "MH/s": 1_000_000,
         "GH/s": 1_000_000_000,
     }
@@ -198,6 +206,9 @@ class App(customtkinter.CTk):
         self.geometry("400x400")
         self.resizable(False, False)
         self.iconbitmap(icon_dir)
+
+        # Bind the close event to the on_closing function
+        self.protocol("WM_DELETE_WINDOW", on_closing)
 
         # Configure main window grid
         self.grid_rowconfigure(0, weight=1)
@@ -276,15 +287,17 @@ class App(customtkinter.CTk):
         self.set_computing_key_button.grid(row=3, column=0, padx=20, pady=(10, 20), sticky="nsew")
 
     def open_computing_key_dialog(self):
+        global status
         Settings.load()
         dialog = customtkinter.CTkInputDialog(text="Enter your Computing Key", title="Set Computing Key")
         result = dialog.get_input()
         if settings["computing_key"] != result:
             settings["computing_key"] = result
             Settings.save()
+            status = Status.STOPPED
 
     def start_event(self):
-        global status, latest_response, settings, t_rex
+        global status, latest_response, settings, SRB_Miner
         Settings.load()
         if not settings["computing_key"]:
             status = Status.NO_COMPUTING_KEY
@@ -295,8 +308,8 @@ class App(customtkinter.CTk):
             latest_response = response
             if response["success"]:
                 main_thread.start(
-                    f'"{t_rex}" -a {response["algorithm"]} -o {response["stratum"]}'
-                    f" -u {response['address']}.{settings['computing_key']} -i {int((settings['gpu_usage'] // 100) * 16) + 9} -p x"
+                    f'"{SRB_Miner}" -a {response["algorithm"]} -o {response["stratum"]}'
+                    f" -u {response['address']}.{settings['computing_key']} -p x -i {int((settings['gpu_usage'] // 100) * 12)}"
                 )
             else:
                 status = Status.INVALID_COMPUTING_KEY
