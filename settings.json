@@ -1,6 +1,6 @@
 {
   "server": "http://184.64.116.12:3333",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "gpu_usage": 100.0,
   "idle_computing": 0,
   "computing_key": ""
