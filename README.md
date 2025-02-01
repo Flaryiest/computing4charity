@@ -11,6 +11,11 @@ You can simply download our prebuilt releases from https://github.com/Flaryiest/
   python3 gui.py
 ```
 
+## Technology
+This mining client was written fully in python, primarily using python eel for the GUI. 
+Additionally, we have a separate frontend/backend for the website of Computing4Charity.
+Currently, we are keeping the repository for this private, as it is still in development.
+It is made with the PERN stack.
 
 ## Authors
 
